@@ -1,0 +1,46 @@
+{
+  "name": "sqlcached",
+  "version": "0.0.1",
+  "description": "A caching daemon for MySQL",
+  "author": {
+    "name": "Roberto Maestroni",
+    "email": "r.maestroni@gmail.com"
+  },
+  "contributors": [{}],
+  "bin": {
+    "sqlcached": "./index.js"
+  },
+  "scripts": {
+    "test": "npm run compile && mocha",
+    "compile": "./node_modules/.bin/coffee -c ./*.coffee ./test/*.coffee",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rmaestroni/sqlcached.git"
+  },
+  "bugs": {},
+  "keywords": ["cache", "sql", "mysql", "redis"],
+  "dependencies": {
+    "express": "~4.12.3",
+    "body-parser": "~1.12.2",
+    "minimist": "~1.1.1",
+    "collections": "~1.2.2",
+    "mysql": "~2.6.2",
+    "swig": "~1.4.2",
+    "hiredis": "~0.3.0",
+    "redis": "~0.12.1",
+    "js-yaml": "~3.2.7",
+    "object-hash": "~0.5.0",
+    "underscore": "~1.0.1"
+  },
+  "devDependencies": {
+    "coffee-script": "~1.9.2",
+    "mocha": "~2.2.4",
+    "expect.js": "~0.3.1"
+  },
+  "preferGlobal": true,
+  "private": true,
+  "publishConfig": {},
+  "license": "GPL v2"
+}
