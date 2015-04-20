@@ -5,7 +5,7 @@ mysql = require("mysql")
 yaml = require("js-yaml")
 fs = require("fs")
 redis = require("redis")
-u = require("underscore")
+u = require("underscore")._
 
 getMysqlConnectionPool = ->
   # parse yaml config file
@@ -29,7 +29,7 @@ process.on "SIGINT", ->
 # Application modules
 queryTemplates = require("./query-templates").getSet()
 database = require("./database").getDatabase(mysqlConnectionPool, redisClient)
-
+manager = require("./manager").getApplicationManager(queryTemplates, database)
 
 # General error handler
 errorHandler = (err, req, res, next) ->
@@ -43,80 +43,58 @@ app.use(bodyParser.urlencoded(extended: false))
 app.use(bodyParser.json())
 app.use(errorHandler) # must be the last middleware registered
 
+httpCallback = (err, entity, httpResponse, successCode) ->
+  if err
+    httpResponse.writeHead(err.status, "Content-Type": "application/json")
+    if u.isString(err)
+      httpResponse.write(err)
+    else
+      httpResponse.write(JSON.stringify(err))
+  else
+    httpResponse.writeHead(successCode, "Content-Type": "application/json")
+    if u.isString(entity)
+      httpResponse.write(entity)
+    else
+      httpResponse.write(JSON.stringify(entity))
+  httpResponse.end()
+
 
 app.get "/queries", (request, response) ->
-  response.writeHead(200, "Content-Type": "application/json")
-  response.write(JSON.stringify(queryTemplates.toArray()))
-  response.end()
+  manager.indexQueries (err, value) ->
+    httpCallback(err, value, response, 200)
+
 
 app.post "/queries", (request, response) ->
   id = request.body["id"]
   query = request.body["query"]
-  if queryTemplates.has(id)
-    response.writeHead(422, "Content-Type": "application/json")
-    response.write(JSON.stringify(error: "id already taken"))
-  else
-    object = queryTemplates.add(id, query)
-    response.writeHead(201, "Content-Type": "application/json")
-    response.write(JSON.stringify(object))
-  response.end()
+  manager.createQuery id, query, (err, value) ->
+    httpCallback(err, value, response, 201)
+
 
 app.delete "/queries/:id", (request, response) ->
-  id = request.params.id
-  if object = queryTemplates.get(id)
-    if queryTemplates.delete(id)
-      database.clearTemplateCache object, (err, reply) ->
-        # ignore err
-        response.writeHead(200, "Content-Type": "application/json")
-        response.write(JSON.stringify(object))
-        response.end()
-    else
-      response.writeHead(500, "Content-Type": "application/json")
-      response.write(JSON.stringify(error: "unable to delete the specified object"))
-      response.end()
-  else
-    response.writeHead(404, "Content-Type": "text/plain")
-    response.write("404 Not Found")
-    response.end()
+  manager.deleteQuery request.params.id, (err, reply) ->
+    httpCallback(err, reply, response, 200)
+
 
 app.get "/data/:query_id", (request, response) ->
   queryId = request.params.query_id
   queryParams = request.query.query_params
-  if (queryTemplate = queryTemplates.get(queryId))?
-    database.getData queryTemplate, queryParams, (err, result) ->
-      if err?
-        [respCode, respEntity] = [500, JSON.stringify(err)]
-      else
-        [respCode, respEntity] = [200, result]
-      response.writeHead(respCode, "Content-Type": "application/json")
-      response.write(respEntity)
-      response.end()
-  else
-    response.writeHead(404, "Content-Type": "text/plain")
-    response.write("404 Not Found")
-    response.end()
+  manager.getData queryId, queryParams, (err, reply) ->
+    httpCallback(err, reply, response, 200)
+
+
+app.post "/data", (request, response) ->
+  queryId = request.body["id"]
+  query = request.body["query"]
+  queryParams = request.body["query_params"]
+  manager.createQueryAndGetData queryId, query, queryParams, (err, reply) ->
+    httpCallback(err, reply, response, 200)
 
 app.delete "/data/:query_id/cache", (request, response) ->
   queryId = request.params.query_id
   queryParams = request.query.query_params
-  if (queryTemplate = queryTemplates.get(queryId))?
-    if u.isEmpty(queryParams)
-      # remove everything for the specified template
-      database.clearTemplateCache queryTemplate, (err, reply) ->
-        # ignore err
-        response.writeHead(200, "Content-Type": "text/plain")
-        response.write("Removed #{reply} items from cache")
-        response.end()
-    else
-      database.clearCacheEntry queryTemplate, queryParams, (err, reply) ->
-        # ignore err
-        response.writeHead(200, "Content-Type": "text/plain")
-        response.write("Removed #{reply} items from cache")
-        response.end()
-  else
-    response.writeHead(404, "Content-Type": "text/plain")
-    response.write("404 Not Found")
-    response.end()
+  manager.deleteDataCache queryId, queryParams, (err, reply) ->
+    httpCallback(err, reply, response, 200)
 
 
 # Get command line options via minimists
