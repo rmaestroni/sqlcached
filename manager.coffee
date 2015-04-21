@@ -59,17 +59,47 @@ class Manager
       if err
         callback(err)
       else
-        queryParams = [queryParams] if !u.isArray(queryParams)
-        iterator = (item, itCallback) =>
-          @getData(queryId, item, itCallback)
-        done = (err, mappedAry) ->
-          callback(err, mappedAry)
-        async.map(queryParams, iterator, done)
+        @getData(queryId, queryParams, callback)
     #
     if !@queryTemplates.has(queryId)
       @createQuery(queryId, query, retrieveData)
     else
       retrieveData(undefined, @queryTemplates.get(queryId))
+
+
+  getDataBatch: (request, callback) ->
+    # callback on map completed
+    done = (err, mappedAry) ->
+      err = { status: 500, error: err } if err # add the http status to err
+      callback(err, mappedAry)
+    # mapping function
+    iterator = (item, itCallback) =>
+      # itCallback(err, transformedItem)
+      if u.isArray(item)
+        # map recursively
+        async.map(item, iterator, itCallback)
+      else if @_hasProperties(item, ["queryId", "queryTemplate", "queryParams"])
+        # get db data
+        id = item.queryId
+        query = item.queryTemplate
+        params = item.queryParams
+        @createQueryAndGetData id, query, params, (err, data) ->
+          currentItem = u.clone(item)
+          if err
+            itCallback({ error: err, item: currentItem })
+          else
+            currentItem["resultset"] = data
+            itCallback(undefined, currentItem)
+      else
+        itCallback({ error: "unable to handle #{item}" })
+    async.map(request, iterator, done)
+
+
+  # utility function
+  _hasProperties: (object, properties) ->
+    for property in properties
+      return false if !object[property]?
+    true
 
 
 module.exports =

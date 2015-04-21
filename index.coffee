@@ -83,12 +83,11 @@ app.get "/data/:query_id", (request, response) ->
     httpCallback(err, reply, response, 200)
 
 
-app.post "/data", (request, response) ->
-  queryId = request.body["id"]
-  query = request.body["query"]
-  queryParams = request.body["query_params"]
-  manager.createQueryAndGetData queryId, query, queryParams, (err, reply) ->
+app.post "/data-batch", (request, response) ->
+  batchData = request.body["batch"]
+  manager.getDataBatch batchData, (err, reply) ->
     httpCallback(err, reply, response, 200)
+
 
 app.delete "/data/:query_id/cache", (request, response) ->
   queryId = request.params.query_id
