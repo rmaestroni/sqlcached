@@ -6,6 +6,7 @@ yaml = require("js-yaml")
 fs = require("fs")
 redis = require("redis")
 u = require("underscore")._
+log = require("bunyan").createLogger(name: "sqlcached")
 
 getMysqlConnectionPool = ->
   # parse yaml config file
@@ -16,23 +17,29 @@ getMysqlConnectionPool = ->
     poolCluster.add(host)
   poolCluster
 
+getRedisClient = ->
+  # parse yaml config file
+  config = yaml.safeLoad(fs.readFileSync("./config/redis.yml", "utf8"))
+  redis.createClient(config.port, config.host)
+
 mysqlConnectionPool = getMysqlConnectionPool()
-redisClient = redis.createClient()
+redisClient = getRedisClient()
 
 process.on "SIGINT", ->
-  console.log "> received SIGINT, shutting down..."
+  log.info "> received SIGINT, shutting down..."
   mysqlConnectionPool.end (error) ->
-    console.log "error in closing mysql connection pool: #{error}" if error?
+    log.error(error, "error in closing mysql connection pool") if error?
   redisClient.quit()
   process.exit()
 
 # Application modules
 queryTemplates = require("./query-templates").getSet()
 database = require("./database").getDatabase(mysqlConnectionPool, redisClient)
-manager = require("./manager").getApplicationManager(queryTemplates, database)
+manager = require("./manager").getApplicationManager(log, queryTemplates, database)
 
 # General error handler
 errorHandler = (err, req, res, next) ->
+  log.error(err, "Express app error handler called")
   res.writeHead(500, "Content-Type": "application/json")
   res.write(JSON.stringify( error: err.toString() ))
   res.end()
@@ -40,7 +47,7 @@ errorHandler = (err, req, res, next) ->
 # Init Express application
 app = express()
 app.use(bodyParser.urlencoded(extended: false))
-app.use(bodyParser.json())
+app.use(bodyParser.json(limit: "10mb"))
 app.use(errorHandler) # must be the last middleware registered
 
 httpCallback = (err, entity, httpResponse, successCode) ->
@@ -103,4 +110,4 @@ argv = require("minimist")(process.argv.slice(2))
 server = app.listen argv.port || 8081, ->
   host = server.address().address
   port = server.address().port
-  console.log("Server listening at http://%s:%s", host, port)
+  log.info("Server listening at http://%s:%s", host, port)

@@ -2,7 +2,7 @@ u = require("underscore")._
 async = require("async")
 
 class Manager
-  constructor: (@queryTemplates, @database) ->
+  constructor: (@logger, @queryTemplates, @database) ->
 
 
   indexQueries: (callback) ->
@@ -69,8 +69,10 @@ class Manager
 
   getDataBatch: (request, callback) ->
     # callback on map completed
-    done = (err, mappedAry) ->
-      err = { status: 500, error: err } if err # add the http status to err
+    done = (err, mappedAry) =>
+      if err # add the http status to err
+        @logger.error(err)
+        err = { status: 500, error: err }
       callback(err, mappedAry)
     # mapping function
     iterator = (item, itCallback) =>
@@ -103,5 +105,5 @@ class Manager
 
 
 module.exports =
-  getApplicationManager: (queryTemplates, database) ->
-    new Manager(queryTemplates, database)
+  getApplicationManager: (logger, queryTemplates, database) ->
+    new Manager(logger, queryTemplates, database)
