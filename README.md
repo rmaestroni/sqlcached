@@ -10,7 +10,7 @@ queries on a MySQL database, and to cache the results.
 The main concept in Sqlcached is the **query template**: a SQL query with
 some named parameters. For example
 
-```
+```sql
 SELECT * FROM users WHERE username = '{{ username }}' OR email = '{{ email }}'
 ```
 it's a query template with two parameters: *username* and *email*.
@@ -37,7 +37,7 @@ Returns the set of all the query templates available.
 
 #### POST /queries
 Creates a new query template. Example payload
-```
+```json
 {
   "id": "foo",
   "query": "SELECT * FROM users WHERE username = '{{ uname }}'"
@@ -66,7 +66,7 @@ set *{(foo, bar), (baz, biz)}*.
 #### POST /data-batch
 It's the same as (POST /queries) + (GET /data/:query_id). It creates a query
 template if it doesn't exist, and executes it with the provided parameters.
-```
+```json
 {
   "batch": [
     {
@@ -82,7 +82,7 @@ template if it doesn't exist, and executes it with the provided parameters.
 
 It is possible to provide multiple and/or nested pairs
 *(query_template, parameters)*, for example
-```
+```json
 {
   "batch": [
     [
