@@ -70,9 +70,7 @@ class Manager
   getDataBatch: (request, callback) ->
     # callback on map completed
     done = (err, mappedAry) =>
-      if err # add the http status to err
-        @logger.error(err)
-        err = { status: 500, error: err }
+      err = { status: 500, error: err } if err # add the http status to err
       callback(err, mappedAry)
     # mapping function
     iterator = (item, itCallback) =>
