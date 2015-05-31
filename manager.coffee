@@ -19,7 +19,7 @@ class Manager
   deleteQuery: (id, callback) ->
     if object = @queryTemplates.get(id)
       if @queryTemplates.delete(id)
-        @database.clearTemplateCache object, (err, reply) =>
+        @database.clearTemplateCache object, (err, reply) ->
           # ignore err
           callback(undefined, object)
       else
@@ -34,7 +34,16 @@ class Manager
         if err
           callback({ status: 500, error: err })
         else
-          callback(undefined, result)
+          if result.source is "db"
+            # store data in cache
+            @database.cacheData queryTemplate, queryParams, result.data, (err) =>
+              if err
+                callback({ status: 500, error: err })
+              else
+                callback(undefined, result.data)
+          else
+            # source is 'cache'
+            callback(undefined, result.data)
     else
       callback({ status: 404, error: "not found" })
 
@@ -43,11 +52,11 @@ class Manager
     if (queryTemplate = @queryTemplates.get(queryId))?
       if u.isEmpty(queryParams)
         # remove everything for the specified template
-        @database.clearTemplateCache queryTemplate, (err, reply) =>
+        @database.clearTemplateCache queryTemplate, (err, reply) ->
           # ignore err
           callback(undefined, { items: reply })
       else
-        @database.clearCacheEntry queryTemplate, queryParams, (err, reply) =>
+        @database.clearCacheEntry queryTemplate, queryParams, (err, reply) ->
           # ignore err
           callback(undefined, { items: reply })
     else

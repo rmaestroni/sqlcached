@@ -1,5 +1,6 @@
 Set = require("collections/set")
 swig = require("swig")
+objectHash = require("object-hash")
 
 class QueryTemplate
 
@@ -8,6 +9,12 @@ class QueryTemplate
 
   render: (values) ->
     @renderer(values)
+
+  getCachedDataUid: (queryParams) ->
+    "#{@id}:#{objectHash(queryParams)}"
+
+  getCachedKeysSetName: ->
+    "#{@id}:cached-keys"
 
 
 class QueryTemplates
