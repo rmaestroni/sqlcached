@@ -74,7 +74,8 @@ app.get "/queries", (request, response) ->
 app.post "/queries", (request, response) ->
   id = request.body["id"]
   query = request.body["query"]
-  manager.createQuery id, query, (err, value) ->
+  cache = request.body["cache"]
+  manager.createQuery id, query, cache, (err, value) ->
     httpCallback(err, value, response, 201)
 
 

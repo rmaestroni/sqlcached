@@ -62,16 +62,21 @@ class Database
 
 
   cacheData: (queryTemplate, queryParams, data, callback) ->
+    _redis = @redis
     queryUid = queryTemplate.getCachedDataUid(queryParams) # unique cache key for the data
-    @redis.SET queryUid, data, (err, setReply) =>
+    redisSetCallback = (err) ->
       if err
         callback(err)
       else
-        @redis.SADD queryTemplate.getCachedKeysSetName(), queryUid, (err, saddReply) ->
+        _redis.SADD queryTemplate.getCachedKeysSetName(), queryUid, (err) ->
           if err
             callback(err)
           else
             callback(undefined)
+    if queryTemplate.hasExpiration()
+      _redis.SET(queryUid, data, "EX", queryTemplate.getExpiration(), redisSetCallback)
+    else
+      _redis.SET(queryUid, data, redisSetCallback)
 
 
 module.exports =

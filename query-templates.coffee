@@ -1,10 +1,11 @@
 Set = require("collections/set")
 swig = require("swig")
 objectHash = require("object-hash")
+u = require("underscore")._
 
 class QueryTemplate
 
-  constructor: (@id, @template) ->
+  constructor: (@id, @template, @cache = true) ->
     @renderer = swig.compile(@template)
 
   render: (values) ->
@@ -16,6 +17,12 @@ class QueryTemplate
   getCachedKeysSetName: ->
     "#{@id}:cached-keys"
 
+  hasExpiration: ->
+    u.isNumber(@cache)
+
+  getExpiration: ->
+    @cache
+
 
 class QueryTemplates
 
@@ -24,8 +31,8 @@ class QueryTemplates
     hash = (object) -> object.id
     @queries = new Set(null, equals, hash)
 
-  add: (id, query) ->
-    object = new QueryTemplate(id, query)
+  add: (id, query, cachePolicy) ->
+    object = new QueryTemplate(id, query, cachePolicy)
     @queries.add(object)
     object
 

@@ -9,11 +9,11 @@ class Manager
     callback(undefined, @queryTemplates.toArray())
 
 
-  createQuery: (id, query, callback) ->
+  createQuery: (id, query, cachePolicy, callback) ->
     if @queryTemplates.has(id)
       callback({ status: 422, error: "id already taken" })
     else
-      callback(undefined, @queryTemplates.add(id, query))
+      callback(undefined, @queryTemplates.add(id, query, cachePolicy))
 
 
   deleteQuery: (id, callback) ->
@@ -63,7 +63,7 @@ class Manager
       callback({ status: 404, error: "not found" })
 
 
-  createQueryAndGetData: (queryId, query, queryParams, callback) ->
+  createQueryAndGetData: (queryId, query, cachePolicy, queryParams, callback) ->
     retrieveData = (err, queryTemplate) =>
       if err
         callback(err)
@@ -71,7 +71,7 @@ class Manager
         @getData(queryId, queryParams, callback)
     #
     if !@queryTemplates.has(queryId)
-      @createQuery(queryId, query, retrieveData)
+      @createQuery(queryId, query, cachePolicy, retrieveData)
     else
       retrieveData(undefined, @queryTemplates.get(queryId))
 
@@ -92,7 +92,8 @@ class Manager
         id = item.queryId
         query = item.queryTemplate
         params = item.queryParams
-        @createQueryAndGetData id, query, params, (err, data) ->
+        cachePolicy = item.cache # optional - could be undefined
+        @createQueryAndGetData id, query, cachePolicy, params, (err, data) ->
           currentItem = u.clone(item)
           if err
             itCallback({ error: err, item: currentItem })
