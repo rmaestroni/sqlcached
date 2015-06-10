@@ -12,7 +12,7 @@ class TreeVisitor
         callback(err)
       else
         if u.isEmpty(subtrees = self.getSubtrees(tree))
-          callback(undefined, self.resultBuilder(result, []))
+          callback(undefined, self.resultBuilder(result, [], tree, index))
         else
           async.map(
             u.map(subtrees, (item, index) -> node: item, index: index )
@@ -26,7 +26,7 @@ class TreeVisitor
               if err
                 callback(err)
               else
-                callback(undefined, self.resultBuilder(result, subtreesMapped))
+                callback(undefined, self.resultBuilder(result, subtreesMapped, tree, index))
           )
 
 module.exports =

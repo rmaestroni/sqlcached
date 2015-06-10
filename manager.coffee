@@ -110,7 +110,7 @@ class Manager
   getDataTree: (request, callback) ->
     self = @
 
-    visit = (tree, parent, transformedP, index, visitCallback) ->
+    visit = (tree, parent, transformedP, subtreeIndex, visitCallback) ->
       # transformedP = [ [A11, ..., A1k], [B11, ..., B1j], [C11, ..., C1m], ...]
       #   where each A, B, C, ... is an object
       node = tree["root"]
@@ -160,8 +160,25 @@ class Manager
       ,
       visit
       ,
-      (transfRoot, transfSubtrees) ->
-        root: transfRoot, subtrees: transfSubtrees
+      (transfRoot, transfSubtrees, originalRoot, index) ->
+        # root: transfRoot
+        # subtrees: transfSubtrees
+        # index: index
+        recurse = (object1, label, object2, path...) ->
+          u.map object1, (item, index) ->
+            if u.isArray(item)
+              recurse(item, label, object2, path..., index)
+            else
+              associationData = object2
+              for i in path
+                associationData = associationData[i]
+              item[label] = associationData
+              item
+
+
+        u.each originalRoot["root"]["associations"], (associationName, index) ->
+          recurse(transfRoot, associationName, transfSubtrees[index])
+        transfRoot[0]
     )
 
     visitor.visitInPreorder(request, undefined, [{}], 0, (err, result) ->
