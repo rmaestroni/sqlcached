@@ -1,6 +1,8 @@
 u = require("underscore")._
 async = require("async")
 
+TreeVisitor = require("./tree-visitor").TreeVisitor
+
 class Manager
   constructor: (@logger, @queryTemplates, @database) ->
 
@@ -103,6 +105,69 @@ class Manager
       else
         itCallback({ error: "unable to handle #{item}" })
     async.map(request, iterator, done)
+
+
+  getDataTree: (request, callback) ->
+    self = @
+
+    visit = (tree, parent, transformedP, index, visitCallback) ->
+      # transformedP = [ [A11, ..., A1k], [B11, ..., B1j], [C11, ..., C1m], ...]
+      #   where each A, B, C, ... is an object
+      node = tree["root"]
+
+      buildQueryParams = (queryParamsTemplate, parentObject, errCallback) ->
+        queryParams = {}
+        for own key, obj of queryParamsTemplate
+          switch obj["type"]
+            when "constant"
+              queryParams[key] = obj.value
+            when "parent_attribute"
+              queryParams[key] = parentObject[obj.value]
+            else
+              errCallback("unknown template key type")
+        queryParams
+
+      buildRequest = (parentItem) ->
+        u.map parentItem, (item, index) ->
+          if u.isArray(item)
+            buildRequest(item)
+          else
+            {
+              queryId: node["query_id"]
+              queryTemplate: node["query_template"]
+              queryParams: buildQueryParams(node["query_params"], item, visitCallback)
+            }
+
+      self.getDataBatch(buildRequest(transformedP), (err, batchReply) ->
+        if err
+          visitCallback(err)
+        else
+          transformBatchReply = (data) ->
+            u.map data, (item, index) ->
+              if u.isArray(item)
+                transformBatchReply(item)
+              else
+                JSON.parse(item["resultset"])
+
+          visitCallback(undefined, transformBatchReply(batchReply))
+      )
+      # EOF visit
+
+
+    visitor = new TreeVisitor(
+      (tree) ->
+        tree["subtrees"]
+      ,
+      visit
+      ,
+      (transfRoot, transfSubtrees) ->
+        root: transfRoot, subtrees: transfSubtrees
+    )
+
+    visitor.visitInPreorder(request, undefined, [{}], 0, (err, result) ->
+      callback(undefined, result)
+    )
+
 
 
   # utility function

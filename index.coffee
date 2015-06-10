@@ -92,10 +92,15 @@ app.get "/data/:query_id", (request, response) ->
 
 
 app.post "/data-batch", (request, response) ->
-  batchData = request.body["batch"]
-  manager.getDataBatch batchData, (err, reply) ->
-    httpCallback(err, reply, response, 200)
-
+  if batchData = request.body["batch"]
+    manager.getDataBatch batchData, (err, reply) ->
+      httpCallback(err, reply, response, 200)
+  else if tree = request.body["tree"]
+    manager.getDataTree tree, (err, reply) ->
+      httpCallback(err, reply, response, 200)
+  else
+    httpCallback({ status: 422, message: "Invalid request body" }, undefined,
+      response, undefined)
 
 app.delete "/data/:query_id/cache", (request, response) ->
   queryId = request.params.query_id
