@@ -1,4 +1,4 @@
-u = require("underscore")._
+u = require("underscore")
 async = require("async")
 
 TreeVisitor = require("./tree-visitor").TreeVisitor
@@ -89,11 +89,11 @@ class Manager
       if u.isArray(item)
         # map recursively
         async.map(item, iterator, itCallback)
-      else if @_hasProperties(item, ["queryId", "queryTemplate", "queryParams"])
+      else if @_hasProperties(item, ["query_id", "query_template", "query_params"])
         # get db data
-        id = item.queryId
-        query = item.queryTemplate
-        params = item.queryParams
+        id = item.query_id
+        query = item.query_template
+        params = item.query_params
         cachePolicy = item.cache # optional - could be undefined
         @createQueryAndGetData id, query, cachePolicy, params, (err, data) ->
           currentItem = u.clone(item)
@@ -107,7 +107,7 @@ class Manager
     async.map(request, iterator, done)
 
 
-  getDataTree: (request, callback) ->
+  getDataTree: (queryTree, rootParams, callback) ->
     self = @
 
     visit = (tree, parent, transformedP, subtreeIndex, visitCallback) ->
@@ -133,9 +133,10 @@ class Manager
             buildRequest(item)
           else
             {
-              queryId: node["query_id"]
-              queryTemplate: node["query_template"]
-              queryParams: buildQueryParams(node["query_params"], item, visitCallback)
+              query_id: node["query_id"]
+              query_template: node["query_template"]
+              query_params: buildQueryParams(node["query_params"], item, visitCallback)
+              cache: node["cache"]
             }
 
       self.getDataBatch(buildRequest(transformedP), (err, batchReply) ->
@@ -147,12 +148,11 @@ class Manager
               if u.isArray(item)
                 transformBatchReply(item)
               else
-                JSON.parse(item["resultset"])
+                item["resultset"]
 
           visitCallback(undefined, transformBatchReply(batchReply))
       )
       # EOF visit
-
 
     visitor = new TreeVisitor(
       (tree) ->
@@ -175,16 +175,28 @@ class Manager
               item[label] = associationData
               item
 
-
         u.each originalRoot["root"]["associations"], (associationName, index) ->
           recurse(transfRoot, associationName, transfSubtrees[index])
         transfRoot[0]
     )
 
-    visitor.visitInPreorder(request, undefined, [{}], 0, (err, result) ->
-      callback(undefined, result)
-    )
+    multiRootsTree = rootParams.map (param) ->
+      queryTreeClone = u.clone(queryTree)
+      queryTreeClone["root"] = u.clone(queryTreeClone["root"])
+      queryTreeClone["root"]["query_params"] = u.mapObject param, (value, key) ->
+        { value: value, type: "constant" }
+      queryTreeClone
 
+    async.map(
+      multiRootsTree,
+      (tree, treeCallback) ->
+        visitor.visitInPreorder(tree, undefined, [{}], 0, treeCallback)
+      (err, results) ->
+        if err
+          callback(err)
+        else
+          callback(undefined, u.flatten(results, true))
+    )
 
 
   # utility function

@@ -1,7 +1,7 @@
 Set = require("collections/set")
 swig = require("swig")
 objectHash = require("object-hash")
-u = require("underscore")._
+u = require("underscore")
 
 class QueryTemplate
 

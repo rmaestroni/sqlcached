@@ -8,7 +8,7 @@ class Database
         callback(err)
       else
         if reply
-          callback(undefined, { data: reply, source: "cache" })
+          callback(undefined, { data: JSON.parse(reply), source: "cache" })
         else
           @dbConnectionPool.getConnection (err, connection) ->
             if err
@@ -20,7 +20,7 @@ class Database
                 if err
                   callback(err)
                 else
-                  callback(undefined, { data: JSON.stringify(rows), source: "db" })
+                  callback(undefined, { data: rows, source: "db" })
 
 
   clearTemplateCache: (queryTemplate, callback) ->
@@ -73,10 +73,12 @@ class Database
             callback(err)
           else
             callback(undefined)
+    stringifiedData = JSON.stringify(data)
     if queryTemplate.hasExpiration()
-      _redis.SET(queryUid, data, "EX", queryTemplate.getExpiration(), redisSetCallback)
+      _redis.SET(queryUid, stringifiedData, "EX",
+        queryTemplate.getExpiration(), redisSetCallback)
     else
-      _redis.SET(queryUid, data, redisSetCallback)
+      _redis.SET(queryUid, stringifiedData, redisSetCallback)
 
 
 module.exports =

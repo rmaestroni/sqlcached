@@ -5,7 +5,7 @@ mysql = require("mysql")
 yaml = require("js-yaml")
 fs = require("fs")
 redis = require("redis")
-u = require("underscore")._
+u = require("underscore")
 log = require("bunyan").createLogger(name: "sqlcached")
 
 getMysqlConnectionPool = ->
@@ -73,7 +73,7 @@ app.get "/queries", (request, response) ->
 
 app.post "/queries", (request, response) ->
   id = request.body["id"]
-  query = request.body["query"]
+  query = request.body["query_template"]
   cache = request.body["cache"]
   manager.createQuery id, query, cache, (err, value) ->
     httpCallback(err, value, response, 201)
@@ -91,22 +91,23 @@ app.get "/data/:query_id", (request, response) ->
     httpCallback(err, reply, response, 200)
 
 
-app.post "/data-batch", (request, response) ->
-  if batchData = request.body["batch"]
-    manager.getDataBatch batchData, (err, reply) ->
-      httpCallback(err, reply, response, 200)
-  else if tree = request.body["tree"]
-    manager.getDataTree tree, (err, reply) ->
-      httpCallback(err, reply, response, 200)
-  else
-    httpCallback({ status: 422, message: "Invalid request body" }, undefined,
-      response, undefined)
-
 app.delete "/data/:query_id/cache", (request, response) ->
   queryId = request.params.query_id
   queryParams = request.query.query_params
   manager.deleteDataCache queryId, queryParams, (err, reply) ->
     httpCallback(err, reply, response, 200)
+
+
+app.post "/data-batch", (request, response) ->
+  if batchData = request.body["batch"]
+    manager.getDataBatch batchData, (err, reply) ->
+      httpCallback(err, reply, response, 200)
+  else if tree = request.body["tree"]
+    manager.getDataTree tree, request.body["root_parameters"] || [], (err, reply) ->
+      httpCallback(err, reply, response, 200)
+  else
+    httpCallback({ status: 422, message: "Invalid request body" }, undefined,
+      response, undefined)
 
 
 # Get command line options via minimists

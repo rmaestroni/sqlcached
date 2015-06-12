@@ -26,7 +26,8 @@ MySQL. The results are then stored in Redis for any subsequent request,
 and returned to the client.
 
 Every query result is cached in Redis until it's explicitly cleared via the
-API (see below).
+API (see below) or, if a cache timeout was provided, the cache is automatically
+cleared when the timeout expires.
 
 
 ## API
@@ -40,9 +41,13 @@ Creates a new query template. Example payload
 ```json
 {
   "id": "foo",
-  "query": "SELECT * FROM users WHERE username = '{{ uname }}'"
+  "query_template": "SELECT * FROM users WHERE username = '{{ uname }}'",
+  "cache": 300
 }
 ```
+The key `cache` is optional, it sets a timeout in seconds for the cached data.
+When the query template is executed with actual parameters, the query result
+is kept in the cache for no longer than the specified amount of seconds.
 
 #### DELETE /queries/:id
 Deletes the query template with the specified `id`, and clears any related
@@ -70,9 +75,9 @@ template if it doesn't exist, and executes it with the provided parameters.
 {
   "batch": [
     {
-      "queryId": "user",
-      "queryTemplate": "SELECT * FROM users WHERE id IN ( {{ user_ids }} )",
-      "queryParams": {
+      "query_id": "user",
+      "query_template": "SELECT * FROM users WHERE id IN ( {{ user_ids }} )",
+      "query_params": {
         "user_ids": "1, 2, 3"
       }
     }
