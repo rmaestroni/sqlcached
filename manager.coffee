@@ -195,7 +195,7 @@ class Manager
         if err
           callback(err)
         else
-          callback(undefined, u.flatten(results, true))
+          callback(undefined, resultset: u.flatten(results, true))
     )
 
 

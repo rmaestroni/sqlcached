@@ -93,24 +93,24 @@ It is possible to provide multiple and/or nested pairs
     [
       [
         {
-          "queryId": "user",
-          "queryTemplate": "SELECT * FROM users WHERE id = {{ id }}",
-          "queryParams": {
+          "query_id": "user",
+          "query_template": "SELECT * FROM users WHERE id = {{ id }}",
+          "query_params": {
             "id": 8661209
           }
         },
         {
-          "queryId": "translation",
-          "queryTemplate": "SELECT * FROM translations WHERE translateable_id = {{ translateable_id }} AND translateable_type = '{{ translateable_type }}'",
-          "queryParams": {
+          "query_id": "translation",
+          "query_template": "SELECT * FROM translations WHERE translateable_id = {{ translateable_id }} AND translateable_type = '{{ translateable_type }}'",
+          "query_params": {
             "translateable_id": 80903235,
             "translateable_type": "Product"
           }
         },
         {
-          "queryId": "shop",
-          "queryTemplate": "SELECT * FROM shops WHERE user_id = {{ user_id }}",
-          "queryParams": {
+          "query_id": "shop",
+          "query_template": "SELECT * FROM shops WHERE user_id = {{ user_id }}",
+          "query_params": {
             "user_id": 8661209
           }
         }
