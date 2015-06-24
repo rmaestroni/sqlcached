@@ -1,14 +1,18 @@
 class Database
 
-  constructor: (@dbConnectionPool, @redis) ->
+  constructor: (@dbConnectionPool, @cache) ->
 
+  # Calls the callback specified with the data set related to the query template
+  # and the actual parameters passed.
+  # The reply is in the form { data: <dataSet>, source: "cache"|"db" }, the
+  # dataSet is a js object.
   getData: (queryTemplate, queryParams, callback) ->
-    @redis.GET queryTemplate.getCachedDataUid(queryParams), (err, reply) =>
+    @cache.get queryTemplate.getCachedDataUid(queryParams), (err, reply) =>
       if err
         callback(err)
       else
         if reply
-          callback(undefined, { data: JSON.parse(reply), source: "cache" })
+          callback(undefined, { data: reply, source: "cache" })
         else
           @dbConnectionPool.getConnection (err, connection) ->
             if err
@@ -22,65 +26,27 @@ class Database
                 else
                   callback(undefined, { data: rows, source: "db" })
 
-
+  # Deletes all the cached data for the given query template.
   clearTemplateCache: (queryTemplate, callback) ->
-    _redis = @redis
-    cachedKeysSetName = queryTemplate.getCachedKeysSetName()
-    iterator = (cursor) ->
-      _redis.SSCAN cachedKeysSetName, cursor, (err, reply) ->
-        # reply[0] is the next cursor, reply[1] is an array of keys
-        if err
-          callback(err)
-        else
-          _redis.DEL reply[1], (err) ->
-            if err
-              callback(err)
-            else
-              if reply[0] is "0" # stop iteration
-                # remove the set of the cached keys
-                _redis.DEL cachedKeysSetName, (err) ->
-                  if err
-                    callback(err)
-                  else
-                    callback(undefined)
-              else
-                iterator(reply[0])
-    iterator("0")
+    @cache.deleteAll(queryTemplate.getCachedKeysSetName(), callback)
 
-
+  # Deletes the cached data related to the <queryTemplate, queryParams> passed.
   clearCacheEntry: (queryTemplate, queryParams, callback) ->
-    cachedDataUid = queryTemplate.getCachedDataUid(queryParams)
-    @redis.DEL cachedDataUid, (err, reply) =>
-      if err
-        callback(err)
-      else
-        @redis.SREM queryTemplate.getCachedKeysSetName(), cachedDataUid, (err) ->
-          if err
-            callback(err)
-          else
-            callback(undefined, reply)
+    dataKey = queryTemplate.getCachedDataUid(queryParams)
+    dataKeysSetName = queryTemplate.getCachedKeysSetName()
+    @cache.delete(dataKey, dataKeysSetName, callback)
 
-
+  # Stores the specified data into the cache.
   cacheData: (queryTemplate, queryParams, data, callback) ->
-    _redis = @redis
-    queryUid = queryTemplate.getCachedDataUid(queryParams) # unique cache key for the data
-    redisSetCallback = (err) ->
-      if err
-        callback(err)
-      else
-        _redis.SADD queryTemplate.getCachedKeysSetName(), queryUid, (err) ->
-          if err
-            callback(err)
-          else
-            callback(undefined)
-    stringifiedData = JSON.stringify(data)
+    dataKey = queryTemplate.getCachedDataUid(queryParams)
+    dataKeysSetName = queryTemplate.getCachedKeysSetName()
     if queryTemplate.hasExpiration()
-      _redis.SET(queryUid, stringifiedData, "EX",
-        queryTemplate.getExpiration(), redisSetCallback)
+      @cache.store(dataKey, data, dataKeysSetName,
+        queryTemplate.getExpiration(), callback)
     else
-      _redis.SET(queryUid, stringifiedData, redisSetCallback)
+      @cache.store(dataKey, data, dataKeysSetName, undefined, callback)
 
 
 module.exports =
-  getDatabase: (connectionPool, redisClient) ->
-    new Database(connectionPool, redisClient)
+  getDatabase: (connectionPool, concreteCacheStrategy) ->
+    new Database(connectionPool, concreteCacheStrategy)

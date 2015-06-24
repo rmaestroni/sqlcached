@@ -34,7 +34,8 @@ process.on "SIGINT", ->
 
 # Application modules
 queryTemplates = require("./query-templates").getSet()
-database = require("./database").getDatabase(mysqlConnectionPool, redisClient)
+redisCacheStrategy = require("./redis-strategy").buildStrategy(redisClient)
+database = require("./database").getDatabase(mysqlConnectionPool, redisCacheStrategy)
 manager = require("./manager").getApplicationManager(log, queryTemplates, database)
 
 # General error handler

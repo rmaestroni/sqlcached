@@ -39,7 +39,9 @@
   "devDependencies": {
     "coffee-script": "~1.9.2",
     "mocha": "~2.2.4",
-    "expect.js": "~0.3.1"
+    "expect.js": "~0.3.1",
+    "simple-mock": "~0.3",
+    "sinon": "~1.15"
   },
   "preferGlobal": true,
   "private": true,
