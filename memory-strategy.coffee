@@ -46,6 +46,9 @@ class MemoryStrategy
     callback(undefined, deleteCount)
 
 
+  quit: -> true # no-op
+
+
   storeCacheItem: (dataKeysSetName, cacheItem) ->
     @cachedKeys.get(dataKeysSetName).push(cacheItem)
 

@@ -4,7 +4,6 @@ bodyParser = require("body-parser")
 mysql = require("mysql")
 yaml = require("js-yaml")
 fs = require("fs")
-redis = require("redis")
 u = require("underscore")
 log = require("bunyan").createLogger(name: "sqlcached")
 
@@ -17,26 +16,21 @@ getMysqlConnectionPool = ->
     poolCluster.add(host)
   poolCluster
 
-getRedisClient = ->
-  # parse yaml config file
-  config = yaml.safeLoad(fs.readFileSync("./config/redis.yml", "utf8"))
-  redis.createClient(config.port, config.host)
-
 mysqlConnectionPool = getMysqlConnectionPool()
-redisClient = getRedisClient()
 
+# Application modules
+queryTemplates = require("./query-templates").getSet()
+cacheStrategy = require("./cache-strategy").build()
+database = require("./database").getDatabase(mysqlConnectionPool, cacheStrategy)
+manager = require("./manager").getApplicationManager(log, queryTemplates, database)
+
+# Cleanup on process termination
 process.on "SIGINT", ->
   log.info "> received SIGINT, shutting down..."
   mysqlConnectionPool.end (error) ->
     log.error(error, "error in closing mysql connection pool") if error?
-  redisClient.quit()
+  cacheStrategy.quit()
   process.exit()
-
-# Application modules
-queryTemplates = require("./query-templates").getSet()
-redisCacheStrategy = require("./redis-strategy").buildStrategy(redisClient)
-database = require("./database").getDatabase(mysqlConnectionPool, redisCacheStrategy)
-manager = require("./manager").getApplicationManager(log, queryTemplates, database)
 
 # General error handler
 errorHandler = (err, req, res, next) ->

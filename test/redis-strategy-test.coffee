@@ -17,3 +17,9 @@ describe "RedisStrategy", ->
 
   describe "deleteAll", ->
     it "executes DEL on Redis"
+
+  describe "quit", ->
+    it "calls quit on the redis client", ->
+      fakeClient = quit: -> "foo"
+      strategy = redis.buildStrategy(fakeClient)
+      expect(strategy.quit()).to.be("foo")

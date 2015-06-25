@@ -1,0 +1,7 @@
+# supported strategies: memory/redis
+strategy: memory
+
+# redis config, used when strategy = redis
+redis:
+  host: 127.0.0.1
+  port: 6379

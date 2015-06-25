@@ -65,5 +65,9 @@ class RedisStrategy
     iterator("0")
 
 
+  quit: ->
+    @redis.quit()
+
+
 module.exports =
   buildStrategy: (redisClient) -> new RedisStrategy(redisClient)

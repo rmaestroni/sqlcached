@@ -87,6 +87,11 @@ describe "MemoryStrategy", ->
         store.deleteAll("data-keys-set-name", deleteCallback)
         expect(deleteCallback.calledWith(undefined, 0)).to.be(true)
 
+  describe "quit", ->
+    it "does nothing", ->
+      store = memory.buildStrategy()
+      expect(store.quit()).to.be.ok()
+
 
 describe "CacheItem", ->
 
