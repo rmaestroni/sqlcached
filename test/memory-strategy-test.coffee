@@ -102,7 +102,7 @@ describe "CacheItem", ->
       callback = sinon.spy()
       item = new memory.CacheItem("key", 10000, callback)
       item.destroy()
-      expect(item.timeout.ontimeout).to.be(null)
+      expect(item.timeout.ontimeout).to.not.be.ok()
 
   describe "equals", ->
     it "is true if object.dataKey match", ->
