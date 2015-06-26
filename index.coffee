@@ -1,6 +1,7 @@
 # Module dependencies
 express = require("express")
 bodyParser = require("body-parser")
+compression = require("compression")
 mysql = require("mysql")
 yaml = require("js-yaml")
 fs = require("fs")
@@ -43,6 +44,7 @@ errorHandler = (err, req, res, next) ->
 app = express()
 app.use(bodyParser.urlencoded(extended: false, limit: "10mb"))
 app.use(bodyParser.json(limit: "10mb"))
+app.use(compression())
 app.use(errorHandler) # must be the last middleware registered
 
 httpCallback = (err, entity, httpResponse, successCode) ->
