@@ -17,7 +17,7 @@ class MemoryStrategy
 
 
   store: (dataKey, dataSet, dataKeysSetName, timeToLive, callback) ->
-    @dataStore.add(dataSet, dataKey)
+    @dataStore.set(dataKey, dataSet)
     if timeToLive?
       expCallback = =>
         @delete(dataKey, dataKeysSetName, ->)
@@ -39,9 +39,8 @@ class MemoryStrategy
   deleteAll: (dataKeysSetName, callback) ->
     deleteCount = 0
     @forEachCacheItem dataKeysSetName, (cacheItem) =>
-      @dataStore.delete(cacheItem.dataKey)
+      deleteCount++ if @dataStore.delete(cacheItem.dataKey)
       cacheItem.destroy()
-      deleteCount++
     @deleteAllCacheItems(dataKeysSetName)
     callback(undefined, deleteCount)
 

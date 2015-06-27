@@ -47,20 +47,21 @@ app.use(bodyParser.json(limit: "10mb"))
 app.use(compression())
 app.use(errorHandler) # must be the last middleware registered
 
-httpCallback = (err, entity, httpResponse, successCode) ->
-  if err
-    httpResponse.writeHead(err.status, "Content-Type": "application/json")
-    if u.isString(err)
-      httpResponse.write(err)
-    else
-      httpResponse.write(JSON.stringify(err))
-  else
-    httpResponse.writeHead(successCode, "Content-Type": "application/json")
-    if u.isString(entity)
-      httpResponse.write(entity)
-    else
-      httpResponse.write(JSON.stringify(entity))
-  httpResponse.end()
+httpCallback = (err, entity, res, successCode) ->
+  res.format
+    json: ->
+      if err
+        res = res.status(err.status)
+        if u.isString(err)
+          res.send(err)
+        else
+          res.send(JSON.stringify(err))
+      else
+        res = res.status(successCode)
+        if u.isString(entity)
+          res.send(entity)
+        else
+          res.send(JSON.stringify(entity))
 
 
 app.get "/queries", (request, response) ->

@@ -1,5 +1,7 @@
-# supported strategies: memory/redis
-strategy: memory
+# supported strategies: memory/redis/redis-spawn
+# the redis-spawn spawns an instance of redis-server, and connects to it
+# through a unix-domain socket
+strategy: redis-spawn
 
 # redis config, used when strategy = redis
 redis:
