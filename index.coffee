@@ -1,118 +1,33 @@
-# Module dependencies
-express = require("express")
-bodyParser = require("body-parser")
-compression = require("compression")
-mysql = require("mysql")
-yaml = require("js-yaml")
-fs = require("fs")
-u = require("underscore")
-log = require("bunyan").createLogger(name: "sqlcached")
+# Get command line options via minimists
+argv = require("minimist")(process.argv.slice(2))
+# Create a logger
+logger = require("bunyan").createLogger(name: "sqlcached")
 
-getMysqlConnectionPool = ->
-  # parse yaml config file
-  config = yaml.safeLoad(fs.readFileSync("./config/database.yml", "utf8"))
-  poolCluster = mysql.createPoolCluster()
-  for host in config.pool
-    host.database = config.database
-    poolCluster.add(host)
-  poolCluster
+# sqlcached main module
+Application = require("./application").Application
 
-mysqlConnectionPool = getMysqlConnectionPool()
+# Factory method
+buildApplication = (argv, logger) ->
+  new Application(argv, logger)
 
-# Application modules
-queryTemplates = require("./query-templates").getSet()
-cacheStrategy = require("./cache-strategy").build()
-database = require("./database").getDatabase(mysqlConnectionPool, cacheStrategy)
-manager = require("./manager").getApplicationManager(log, queryTemplates, database)
+app = buildApplication(argv, logger)
 
 # Cleanup on process termination
 process.on "SIGINT", ->
-  log.info "> received SIGINT, shutting down..."
-  mysqlConnectionPool.end (error) ->
-    log.error(error, "error in closing mysql connection pool") if error?
-  cacheStrategy.quit()
-  process.exit()
+  logger.info "> received SIGINT, terminating application..."
+  app.term()
+  process.exit(0)
 
-# General error handler
-errorHandler = (err, req, res, next) ->
-  log.error(err, "Express app error handler called")
-  res.writeHead(500, "Content-Type": "application/json")
-  res.write(JSON.stringify( error: err.toString() ))
-  res.end()
-
-# Init Express application
-app = express()
-app.use(bodyParser.urlencoded(extended: false, limit: "10mb"))
-app.use(bodyParser.json(limit: "10mb"))
-app.use(compression())
-app.use(errorHandler) # must be the last middleware registered
-
-httpCallback = (err, entity, res, successCode) ->
-  res.format
-    json: ->
-      if err
-        res = res.status(err.status)
-        if u.isString(err)
-          res.send(err)
-        else
-          res.send(JSON.stringify(err))
-      else
-        res = res.status(successCode)
-        if u.isString(entity)
-          res.send(entity)
-        else
-          res.send(JSON.stringify(entity))
-
-
-app.get "/queries", (request, response) ->
-  manager.indexQueries (err, value) ->
-    httpCallback(err, value, response, 200)
-
-
-app.post "/queries", (request, response) ->
-  id = request.body["id"]
-  query = request.body["query_template"]
-  cache = request.body["cache"]
-  manager.createQuery id, query, cache, (err, value) ->
-    httpCallback(err, value, response, 201)
-
-
-app.delete "/queries/:id", (request, response) ->
-  manager.deleteQuery request.params.id, (err, reply) ->
-    httpCallback(err, reply, response, 200)
-
-
-app.get "/data/:query_id", (request, response) ->
-  queryId = request.params.query_id
-  queryParams = request.query.query_params
-  manager.getData queryId, queryParams, (err, reply) ->
-    httpCallback(err, reply, response, 200)
-
-
-app.delete "/data/:query_id/cache", (request, response) ->
-  queryId = request.params.query_id
-  queryParams = request.query.query_params
-  manager.deleteDataCache queryId, queryParams, (err, reply) ->
-    httpCallback(err, reply, response, 200)
-
-
-app.post "/data-batch", (request, response) ->
-  if batchData = request.body["batch"]
-    manager.getDataBatch batchData, (err, reply) ->
-      httpCallback(err, reply, response, 200)
-  else if tree = request.body["tree"]
-    manager.getDataTree tree, request.body["root_parameters"] || [], (err, reply) ->
-      httpCallback(err, reply, response, 200)
+# Reinit when an exception bubbles up
+process.on "uncaughtException", (err) ->
+  errorHandler = app.getErrorHandler(err)
+  if errorHandler.reinit
+    logger.error(err, "Got uncaught exception, going to reinit the application...")
+    app = buildApplication(argv, logger)
+    app.init(errorHandler.reinitOptions)
   else
-    httpCallback({ status: 422, message: "Invalid request body" }, undefined,
-      response, undefined)
+    logger.fatal(err, "Fatal error")
+    process.exit(1)
 
-
-# Get command line options via minimists
-argv = require("minimist")(process.argv.slice(2))
-
-# Run http server
-server = app.listen argv.port || 8081, ->
-  host = server.address().address
-  port = server.address().port
-  log.info("Server listening at http://%s:%s", host, port)
+# Run
+app.init()
