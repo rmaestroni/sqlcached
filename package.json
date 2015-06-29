@@ -14,7 +14,7 @@
     "test": "npm run compile && npm run compile-test && mocha",
     "compile": "./node_modules/.bin/coffee -o ./build -c ./src/*.coffee",
     "compile-test": "./node_modules/.bin/coffee -o ./test -c ./test/*.coffee",
-    "start": "node ./build/index.js"
+    "server": "node ./build/index.js"
   },
   "repository": {
     "type": "git",
