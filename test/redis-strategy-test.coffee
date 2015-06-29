@@ -2,7 +2,7 @@ assert = require("assert")
 expect = require("expect.js")
 sinon = require("sinon")
 
-redis = require("../redis-strategy")
+redis = require("../build/redis-strategy")
 
 describe "RedisStrategy", ->
 

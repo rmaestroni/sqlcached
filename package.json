@@ -11,9 +11,10 @@
     "sqlcached": "./index.js"
   },
   "scripts": {
-    "test": "npm run compile && mocha",
-    "compile": "./node_modules/.bin/coffee -c ./*.coffee ./test/*.coffee",
-    "start": "node index.js"
+    "test": "npm run compile && npm run compile-test && mocha",
+    "compile": "./node_modules/.bin/coffee -o ./build -c ./src/*.coffee",
+    "compile-test": "./node_modules/.bin/coffee -o ./test -c ./test/*.coffee",
+    "start": "node ./build/index.js"
   },
   "repository": {
     "type": "git",

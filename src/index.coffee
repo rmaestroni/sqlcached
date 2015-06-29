@@ -18,7 +18,7 @@ process.on "SIGINT", ->
   app.term()
   process.exit(0)
 
-# Reinit when an exception bubbles up
+# Handle uncaught exceptions
 process.on "uncaughtException", (err) ->
   errorHandler = app.getErrorHandler(err)
   if errorHandler.reinit

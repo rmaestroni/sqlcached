@@ -2,7 +2,7 @@ assert = require("assert")
 expect = require("expect.js")
 sinon = require("sinon")
 
-database = require("../database")
+database = require("../build/database")
 
 describe "Database", ->
 

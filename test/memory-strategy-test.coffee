@@ -2,7 +2,7 @@ assert = require("assert")
 expect = require("expect.js")
 sinon = require("sinon")
 
-memory = require("../memory-strategy")
+memory = require("../build/memory-strategy")
 
 describe "MemoryStrategy", ->
 

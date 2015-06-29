@@ -1,7 +1,7 @@
 assert = require("assert")
 expect = require("expect.js")
 
-queryTemplates = require("../query-templates.js")
+queryTemplates = require("../build/query-templates.js")
 
 describe "QueryTemplates", ->
 
