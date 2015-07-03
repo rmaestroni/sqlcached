@@ -12,15 +12,21 @@ class RedisStrategy
 
 
   store: (dataKey, dataSet, dataKeysSetName, timeToLive, callback) ->
+    _redis = @redis
+    redisSetCallback = (err) ->
+      if err
+        callback(err)
+      else
+        _redis.SADD dataKeysSetName, dataKey, (err) ->
+          if err
+            callback(err)
+          else
+            callback(undefined)
     stringifiedData = JSON.stringify(dataSet)
-    multi = @redis.multi()
     if timeToLive?
-      multi.SET(dataKey, stringifiedData, "EX", timeToLive)
+      _redis.SET(dataKey, stringifiedData, "EX", timeToLive, redisSetCallback)
     else
-      multi.SET(dataKey, stringifiedData)
-    multi.SADD dataKeysSetName, dataKey, (err) ->
-    multi.exec (err, replies) ->
-      callback(err)
+      _redis.SET(dataKey, stringifiedData, redisSetCallback)
 
 
   delete: (dataKey, dataKeysSetName, callback) ->
