@@ -8,7 +8,7 @@
   },
   "contributors": [{}],
   "bin": {
-    "sqlcached": "./index.js"
+    "sqlcached": "./build/index.js"
   },
   "scripts": {
     "test": "npm run compile && npm run compile-test && mocha",
