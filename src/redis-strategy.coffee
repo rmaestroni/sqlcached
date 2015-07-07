@@ -65,6 +65,24 @@ class RedisStrategy
     iterator("0")
 
 
+  storeAttachment: (id, object, callback) ->
+    _redis = @redis
+    _redis.SADD id, JSON.stringify(object), (err, reply) ->
+      if err
+        callback(err)
+      else
+        _redis.EXPIRE id, 1800, (err, reply) ->
+          callback(err)
+
+
+  getAttachment: (id, callback) ->
+    @redis.SMEMBERS id, (err, reply) ->
+      if err
+        callback(err)
+      else
+        callback(undefined, (JSON.parse(item) for item in (reply || [])))
+
+
   quit: ->
     @redis.quit()
 

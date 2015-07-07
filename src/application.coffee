@@ -99,11 +99,23 @@ class Application
         manager.getDataBatch batchData, (err, reply) ->
           httpCallback(err, reply, response, 200)
       else if tree = request.body["tree"]
-        manager.getDataTree tree, request.body["root_parameters"] || [], (err, reply) ->
+        rootParams = request.body["root_parameters"] || []
+        attachments = request.body["attachments"]
+        manager.getDataTree tree, rootParams, attachments, (err, reply) ->
           httpCallback(err, reply, response, 200)
       else
         httpCallback({ status: 422, message: "Invalid request body" }, undefined,
           response, undefined)
+
+    app.post "/resultset-attachments", (request, response) ->
+      if (resultset = request.body["resultset"])? &&
+          (attachments = request.body["attachments"])?
+        manager.storeAttachments resultset, attachments, (err, reply) ->
+          httpCallback(err, reply, response, 201)
+      else
+        httpCallback({ status: 422, message: "Invalid request body" }, undefined,
+          response, undefined)
+
 
     # Start the http server
     @server = app.listen @argv.port || 8081, =>

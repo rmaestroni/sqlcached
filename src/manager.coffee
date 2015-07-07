@@ -1,5 +1,6 @@
 u = require("underscore")
 async = require("async")
+objectHash = require("object-hash")
 
 TreeVisitor = require("./tree-visitor").TreeVisitor
 
@@ -107,7 +108,7 @@ class Manager
     async.map(request, iterator, done)
 
 
-  getDataTree: (queryTree, rootParams, callback) ->
+  getDataTree: (queryTree, rootParams, attachmentsReq, callback) ->
     self = @
 
     visit = (tree, parent, transformedP, subtreeIndex, visitCallback) ->
@@ -187,6 +188,20 @@ class Manager
         { value: value, type: "constant" }
       queryTreeClone
 
+    # attachments lookup as the last step
+    doneCallback = (resultset) ->
+      if attachmentsReq
+        self.getAttachments resultset, attachmentsReq, (err, attachments) ->
+          if err
+            callback(err)
+          else
+            callback(undefined, {
+              resultset: resultset
+              attachments: attachments
+            })
+      else
+        callback(undefined, resultset: resultset)
+
     async.map(
       multiRootsTree,
       (tree, treeCallback) ->
@@ -195,9 +210,39 @@ class Manager
         if err
           callback(err)
         else
-          callback(undefined, resultset: u.flatten(results, true))
+          doneCallback(u.flatten(results, true))
     )
 
+
+  storeAttachments: (resultset, attachments, callback) ->
+    self = @
+    async.forEachOf attachments, (attachmentItem, index, itCallback) ->
+      if data = resultset[index]
+        attachmentId = self._getAttachmentId(attachmentItem["name"], data)
+        self.database.storeAttachment(attachmentId, attachmentItem["conditions"],
+          attachmentItem["attachment"], itCallback)
+      else
+        itCallback("No data at position #{index}")
+    , (err) ->
+      callback(err)
+
+
+  getAttachments: (resultset, parameters, callback) ->
+    self = @
+    attachmentsLookup = u.map parameters, (param, index) ->
+      {
+        id: self._getAttachmentId(param["name"], resultset[index])
+        conditionValues: param["condition_values"]
+      }
+    async.map(
+      attachmentsLookup,
+      (attItem, itCallback) ->
+        self.database.getAttachment(attItem.id, attItem.conditionValues, itCallback)
+      , callback)
+
+
+  _getAttachmentId: (attachmentName, data) ->
+    "att:#{attachmentName}:#{objectHash(data)}"
 
   # utility function
   _hasProperties: (object, properties) ->

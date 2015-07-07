@@ -1,3 +1,6 @@
+u = require("underscore")
+us = require("underscore.string")
+
 class Database
 
   constructor: (@dbConnectionPool, @cache) ->
@@ -45,6 +48,50 @@ class Database
         queryTemplate.getExpiration(), callback)
     else
       @cache.store(dataKey, data, dataKeysSetName, undefined, callback)
+
+
+  storeAttachment: (id, conditions, attachment, callback) ->
+    @cache.storeAttachment(id, {
+      conditions: conditions
+      attachment: attachment
+    }, callback)
+
+
+  getAttachment: (id, conditionValues, callback) ->
+    self = @
+    self.cache.getAttachment id, (err, attachmentObjects) ->
+      if err
+        callback(err)
+      else
+        matchingItem = self._findAttachment(attachmentObjects, conditionValues)
+        if matchingItem
+          callback(undefined, matchingItem["attachment"])
+        else
+          callback(undefined, null)
+
+
+  _findAttachment: (attachmentObjects, conditionValues) ->
+    self = @
+    u.find attachmentObjects, (item) ->
+      self._attachmentConditionsMatch(item["conditions"], conditionValues)
+
+
+  _attachmentConditionsMatch: (conditions, conditionValues) ->
+    u.all conditions, (condition) ->
+      parts = us.words(condition)
+      getValue = (index) ->
+        if u.has(conditionValues, parts[index])
+          conditionValues[parts[index]]
+        else
+          parts[index]
+      lvalue = "#{getValue(0)}"
+      rvalue = "#{getValue(2)}"
+      switch parts[1]
+        when "<=" then lvalue <= rvalue
+        when ">" then lvalue > rvalue
+        when "=" then lvalue == rvalue
+        else
+          false
 
 
 module.exports =
