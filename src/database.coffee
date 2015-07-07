@@ -7,8 +7,7 @@ class Database
   # The reply is in the form { data: <dataSet>, source: "cache"|"db" }, the
   # dataSet is a js object.
   getData: (queryTemplate, queryParams, callback) ->
-    cachedDataUid = queryTemplate.getCachedDataUid(queryParams)
-    @cache.get cachedDataUid, (err, reply) =>
+    @cache.get queryTemplate.getCachedDataUid(queryParams), (err, reply) =>
       if err
         callback(err)
       else
@@ -22,11 +21,6 @@ class Database
               sql = queryTemplate.render(queryParams)
               connection.query sql, (err, rows, fields) ->
                 connection.release()
-                # compute a unique cache id for the whole rows set
-                cacheId = "#{cachedDataUid}:#{new Date().getTime()}"
-                # assign the cache id to each item
-                r["_sqlcached_cid"] = cacheId for r in rows
-                # return to the caller
                 if err
                   callback(err)
                 else
