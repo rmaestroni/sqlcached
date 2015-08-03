@@ -229,16 +229,22 @@ class Manager
 
   getAttachments: (resultset, parameters, callback) ->
     self = @
-    # TODO handle the case when resultset[index] is undefined or null
     attachmentsLookup = u.map parameters, (param, index) ->
-      {
-        id: self._getAttachmentId(param["name"], resultset[index])
-        conditionValues: param["condition_values"]
-      }
+      if resultset[index]?
+        {
+          id: self._getAttachmentId(param["name"], resultset[index])
+          conditionValues: param["condition_values"]
+        }
+      else
+        null
     async.map(
       attachmentsLookup,
       (attItem, itCallback) ->
-        self.database.getAttachment(attItem.id, attItem.conditionValues, itCallback)
+        if attItem?
+          self.database.getAttachment(attItem.id, attItem.conditionValues,
+            itCallback)
+        else
+          itCallback(undefined, null)
       , callback)
 
 
