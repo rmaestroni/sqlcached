@@ -2,7 +2,7 @@ fs = require("fs")
 yaml = require("js-yaml")
 redisLib = require("redis")
 spawn = require("child_process").spawn
-sleep = require("sleep").sleep
+sleep = require("./sleep").sleep
 redisStrategy = require("./redis-strategy")
 memoryStrategy = require("./memory-strategy")
 
