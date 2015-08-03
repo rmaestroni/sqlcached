@@ -229,6 +229,7 @@ class Manager
 
   getAttachments: (resultset, parameters, callback) ->
     self = @
+    # TODO handle the case when resultset[index] is undefined or null
     attachmentsLookup = u.map parameters, (param, index) ->
       {
         id: self._getAttachmentId(param["name"], resultset[index])
@@ -242,6 +243,7 @@ class Manager
 
 
   _getAttachmentId: (attachmentName, data) ->
+    data = JSON.stringify(data) if !u.isString(data)
     "att:#{attachmentName}:#{objectHash(data)}"
 
   # utility function
