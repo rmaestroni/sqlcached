@@ -1,4 +1,6 @@
 u = require("underscore")
+us = require("underscore.string")
+async = require("async")
 
 DEFAULT_EXP = 3600
 
@@ -21,11 +23,11 @@ class MemcachedStrategy
       if err
         callback(err)
       else
-        _memcached.add dataKeysSetName, '""', DEFAULT_EXP, (err) ->
+        _memcached.add dataKeysSetName, new SerializedSet().toString(), DEFAULT_EXP, (err) ->
           if err
             callback(err)
           else
-            _memcached.append dataKeysSetName, ", \"#{JSON.stringify(dataKey)}\"", (err) ->
+            _memcached.append dataKeysSetName, new SerializedSetPart(dataKey).toString(), (err) ->
               if err
                 callback(err)
               else
@@ -48,87 +50,102 @@ class MemcachedStrategy
           if err
             callback(err)
           else
-            dataKeysSet = new DataKeysSet(data)
+            dataKeysSet = new SerializedSet(data).parse()
             dataKeysSet.remove(dataKey)
-            _memcached.set dataKeysSetName, dataKeysSet.toString(), DEFAULT_EXP, (err) ->
+            _memcached.set dataKeysSetName, dataKeysSet.serialize().toString(), DEFAULT_EXP, (err) ->
               callback(err)
 
 
   deleteAll: (dataKeysSetName, callback) ->
-    _redis = @redis
-    iterator = (cursor) ->
-      _redis.SSCAN dataKeysSetName, cursor, (err, reply) ->
-        # reply[0] is the next cursor, reply[1] is an array of keys
-        if err
-          callback(err)
-        else
-          _redis.DEL reply[1], (err) ->
-            if err
-              callback(err)
-            else
-              if reply[0] is "0" # stop iteration
-                # remove the set of the cached keys
-                _redis.DEL dataKeysSetName, (err) ->
-                  if err
-                    callback(err)
-                  else
-                    callback(undefined)
-              else
-                iterator(reply[0])
-    iterator("0")
-
-
-  storeAttachment: (id, object, callback) ->
-    _redis = @redis
-    _redis.SADD id, JSON.stringify(object), (err, reply) ->
+    _memcached = @memcached
+    _memcached.get dataKeysSetName, (err, data) ->
       if err
         callback(err)
       else
-        _redis.EXPIRE id, 1800, (err, reply) ->
+        dataKeys = new SerializedSet(data).parse()
+        async.each(
+          dataKeys.getItems(),
+          (dataKey, itCallback) ->
+            _memcached.del dataKey, (err) ->
+              itCallback(err)
+          (err) ->
+            if err
+              callback(err)
+            else
+              _memcached.del dataKeysSetName, (err) ->
+                callback(err)
+        )
+
+
+  storeAttachment: (id, object, callback) ->
+    _memcached = @memcached
+    _memcached.add id, new SerializedSet().toString(), DEFAULT_EXP, (err) ->
+      if err
+        callback(err)
+      else
+        _memcached.append id, new SerializedSetPart(object).toString(), (err) ->
           callback(err)
 
 
   getAttachment: (id, callback) ->
-    @redis.SMEMBERS id, (err, reply) ->
+    @memcached.get id, (err, data) ->
       if err
         callback(err)
       else
-        callback(undefined, (JSON.parse(item) for item in (reply || [])))
+        callback(undefined, new SerializedSet(data).parse().getItems())
 
 
   quit: ->
-    @redis.quit()
+    # TODO
 
 
-  parseDataKeysSet: (string) ->
-    set = JSON.parse("[#{string}]")
+class SerializedSet
 
-
-class DataKeysSet
-  constructor: (@string) ->
-
-  getItems: ->
-    @items ||= @parse(@string)
-
-  setItems: (object) ->
-    @items = object
-
-  remove: (item) ->
-    @setItems(@getItems().filter (value) -> value != item)
-
-  parse: (string) ->
-    @items = JSON.parse("[#{string}]")
-      .filter (item) ->
-        u.isString(item) && item.length > 0
-      .map (item) ->
-        JSON.parse(item)
+  constructor: (@representation = '""') ->
 
   toString: ->
-    @getItems().map (item) ->
-      "\"#{JSON.stringify(item)}\""
-    .join(", ")
+    @representation
 
+  parse: ->
+    new Set(
+      JSON.parse("[#{@representation}]")
+        .filter (item) ->
+          if u.isString(item)
+            !us.isBlank(item)
+          else
+            true
+    )
+
+  add: (serializedPart) ->
+    @representation += serializedPart
+
+
+class SerializedSetPart
+
+  constructor: (@item) ->
+
+  toString: ->
+    ", #{JSON.stringify(@item)}"
+
+class Set
+
+  constructor: (@items = []) ->
+
+  remove: (item) ->
+    @items = @items.filter (member) ->
+      !u.isEqual(member, item)
+
+  serialize: ->
+    @items.reduce(
+      (serializedSet, item) ->
+        serializedSet.add(new SerializedSetPart(item).toString())
+        serializedSet
+      , new SerializedSet()
+    )
+
+  getItems: ->
+    @items
 
 
 module.exports =
-  buildStrategy: (redisClient) -> new RedisStrategy(redisClient)
+  buildStrategy: (client) -> new MemcachedStrategy(client)
