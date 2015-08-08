@@ -40,7 +40,6 @@ class MemcachedStrategy
 
 
   delete: (dataKey, dataKeysSetName, callback) ->
-    self = @
     _memcached = @memcached
     _memcached.del dataKey, (err) ->
       if err
@@ -96,7 +95,7 @@ class MemcachedStrategy
 
 
   quit: ->
-    # TODO
+    @memcached.end()
 
 
 class SerializedSet
