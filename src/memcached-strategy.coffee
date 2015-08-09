@@ -14,6 +14,7 @@ class MemcachedStrategy
       if err
         callback(err)
       else
+        data = null if u.isUndefined(data)
         callback(undefined, JSON.parse(data))
 
 
@@ -24,7 +25,7 @@ class MemcachedStrategy
         callback(err)
       else
         _memcached.add dataKeysSetName, new SerializedSet().toString(), DEFAULT_EXP, (err) ->
-          if err
+          if err && (err.notStored != true)
             callback(err)
           else
             _memcached.append dataKeysSetName, new SerializedSetPart(dataKey).toString(), (err) ->
@@ -79,7 +80,7 @@ class MemcachedStrategy
   storeAttachment: (id, object, callback) ->
     _memcached = @memcached
     _memcached.add id, new SerializedSet().toString(), DEFAULT_EXP, (err) ->
-      if err
+      if err && (err.notStored != true)
         callback(err)
       else
         _memcached.append id, new SerializedSetPart(object).toString(), (err) ->

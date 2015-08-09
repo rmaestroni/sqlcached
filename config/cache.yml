@@ -1,4 +1,4 @@
-# supported strategies: memory/redis/redis-spawn
+# supported strategies: memory/redis/redis-spawn/memcached
 # the redis-spawn spawns an instance of redis-server, and connects to it
 # through a unix-domain socket
 strategy: redis-spawn
@@ -7,3 +7,8 @@ strategy: redis-spawn
 redis:
   host: 127.0.0.1
   port: 6379
+
+memcached:
+  host: localhost
+  port: 11211
+  pool: 5

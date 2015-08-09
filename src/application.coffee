@@ -8,8 +8,8 @@ fs = require("fs")
 u = require("underscore")
 
 # This class implements the initialization and termination logic of Sqlcached.
-# It provides also a way to know what should be done when an uncaught exception
-# bubbles up.
+# It provides also a way to specify what should be done when an uncaught
+# exception bubbles up.
 #
 # @example How to use
 #   app = new Application(command_line_arguments, logger)
